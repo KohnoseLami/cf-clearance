@@ -1,33 +1,55 @@
 # cf-clearance
 
 [![OSCS Status](https://www.oscs1024.com/platform/badge/vvanglro/cf_clearance.svg?size=small)](https://www.oscs1024.com/project/vvanglro/cf_clearance?ref=badge_small)
-[![Package version](https://badge.fury.io/py/cf_clearance.svg)](https://pypi.python.org/pypi/cf_clearance)
+[![Package version](https://img.shields.io/pypi/v/cf_clearance?color=%2334D058&label=pypi%20package)](https://pypi.python.org/pypi/cf_clearance)
 [![Supported Python versions](https://img.shields.io/pypi/pyversions/cf_clearance.svg?color=%2334D058)](https://pypi.python.org/pypi/cf_clearance)
+[![Docker Image versions](https://img.shields.io/docker/v/vvanglro/cf-clearance?color=%2334D058&label=docker%20version)](https://hub.docker.com/r/vvanglro/cf-clearance)
 
-Reference from [playwright_stealth](https://github.com/AtuboDad/playwright_stealth)
-and [undetected-chromedriver](https://github.com/ultrafunkamsterdam/undetected-chromedriver)
 
-Purpose To make a cloudflare challenge pass successfully, Can be use cf_clearance bypassed by cloudflare, However, with
+Purpose To make a cloudflare v2 challenge pass successfully, Can be use cf_clearance bypassed by cloudflare, However, with
 the cf_clearance, make sure you use the same IP and UA as when you got it.
 
 ## Warning
 
-Please use interface mode, You must add headless=False.  
+Please use interface mode, You must add headless=False.
 If you use it on linux or docker, use XVFB.
 
-## Docker
+Challenge are not always successful. Please try more and handle exceptions.
 
-Recommended to install using a Docker container.  
+
+## Docker Usage
+
+Recommended to install using Docker container on Ubuntu server.
 DockerHub => https://hub.docker.com/r/vvanglro/cf-clearance
 
 ```shell
-docker run -d --restart always --network host --name cf-clearance vvanglro/cf-clearance:v1.28.0 \
+docker run -d --restart always --network host --name cf-clearance vvanglro/cf-clearance:latest \
 --host 0.0.0.0 --port 8000 --workers 1
 ```
 
 ```shell
 curl http://localhost:8000/challenge -H "Content-Type:application/json" -X POST \
 -d '{"proxy": {"server": "socks5://localhost:7890"}, "timeout":20, "url": "https://nowsecure.nl"}'
+```
+
+```python
+import requests
+
+proxy = "socks5://localhost:7890"
+resp = requests.post("http://localhost:8000/challenge",
+                     json={"proxy": {"server": proxy}, "timeout": 20,
+                           "url": "https://nowsecure.nl"})
+if resp.json().get("success"):
+    ua = resp.json().get("user_agent")
+    cf_clearance_value = resp.json().get("cookies").get("cf_clearance")
+    # use cf_clearance, must be same IP and UA
+    headers = {"user-agent": ua}
+    cookies = {"cf_clearance": cf_clearance_value}
+    res = requests.get('https://nowsecure.nl', proxies={
+        "all": proxy
+    }, headers=headers, cookies=cookies)
+    if '<title>Just a moment...</title>' not in res.text:
+        print("cf challenge success")
 ```
 
 ## Install
@@ -60,7 +82,7 @@ proxies = {
     "all": "socks5://localhost:7890"
 }
 res = requests.get('https://nowsecure.nl', proxies=proxies)
-if '<title>Please Wait... | Cloudflare</title>' in res.text:
+if '<title>Just a moment...</title>' in res.text:
     print("cf challenge fail")
 # get cf_clearance
 with sync_playwright() as p:
@@ -84,7 +106,7 @@ with sync_playwright() as p:
 headers = {"user-agent": ua}
 cookies = {"cf_clearance": cf_clearance_value}
 res = requests.get('https://nowsecure.nl', proxies=proxies, headers=headers, cookies=cookies)
-if '<title>Please Wait... | Cloudflare</title>' not in res.text:
+if '<title>Just a moment...</title>' not in res.text:
     print("cf challenge success")
 ```
 
@@ -103,7 +125,7 @@ async def main():
         "all": "socks5://localhost:7890"
     }
     res = requests.get('https://nowsecure.nl', proxies=proxies)
-    if '<title>Please Wait... | Cloudflare</title>' in res.text:
+    if '<title>Just a moment...</title>' in res.text:
         print("cf challenge fail")
     # get cf_clearance
     async with async_playwright() as p:
@@ -127,7 +149,7 @@ async def main():
     headers = {"user-agent": ua}
     cookies = {"cf_clearance": cf_clearance_value}
     res = requests.get('https://nowsecure.nl', proxies=proxies, headers=headers, cookies=cookies)
-    if '<title>Please Wait... | Cloudflare</title>' not in res.text:
+    if '<title>Just a moment...</title>' not in res.text:
         print("cf challenge success")
 
 
